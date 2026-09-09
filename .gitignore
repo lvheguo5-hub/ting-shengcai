@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv-*/
+*.mp3
+ondemand/secrets/*
+!ondemand/secrets/.gitkeep
+ondemand/cache/audio/*
+!ondemand/cache/audio/.gitkeep
+ondemand/data/posts/*
+!ondemand/data/posts/.gitkeep
+ondemand/queue/*
+!ondemand/queue/.gitkeep
+.DS_Store
+*.zip
+.env
