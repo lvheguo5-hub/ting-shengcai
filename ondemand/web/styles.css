@@ -116,6 +116,10 @@ h2 {
 }
 .btn-mini:active { background: var(--fill-strong); }
 .btn-mini.danger { color: var(--danger); background: rgba(255, 59, 48, 0.1); }
+.btn-mini.joined, #btn-add-queue.joined {
+  color: var(--muted); background: var(--fill); cursor: default; opacity: .9;
+}
+.btn-mini.joined:active, #btn-add-queue.joined:active { background: var(--fill); }
 .back { background: transparent; color: var(--accent); padding: 4px 0 12px; font-weight: 600; }
 .back:active { opacity: .55; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }

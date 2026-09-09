@@ -146,6 +146,33 @@
     );
   }
 
+  function isInPlaylist(entityType, entityId) {
+    return findIndex(entityType, String(entityId)) >= 0;
+  }
+
+  function syncQueueButtons() {
+    // topic list buttons
+    document.querySelectorAll("#topics li").forEach((li) => {
+      const btn = li.querySelector(".add-q");
+      if (!btn) return;
+      const et = btn.dataset.et;
+      const eid = btn.dataset.eid;
+      if (!et || !eid) return;
+      const joined = isInPlaylist(et, eid);
+      btn.textContent = joined ? "已加入" : "加入待听";
+      btn.classList.toggle("joined", joined);
+      btn.disabled = joined;
+    });
+    // reader button
+    const rb = $("#btn-add-queue");
+    if (rb && current) {
+      const joined = isInPlaylist(current.entityType, current.entityId);
+      rb.textContent = joined ? "已加入待听" : "加入待听";
+      rb.classList.toggle("joined", joined);
+      rb.disabled = joined;
+    }
+  }
+
   function addToPlaylist(t) {
     const entityType = t.entityType || t.entity_type;
     const entityId = String(t.entityId ?? t.entity_id ?? "");
@@ -173,6 +200,7 @@
     playlist.push(item);
     savePlaylist();
     renderPlaylist();
+    syncQueueButtons();
     toast("已加入待听");
     // fire-and-forget prepare
     prepareItem(item).catch(() => {});
@@ -195,6 +223,7 @@
     }
     savePlaylist();
     renderPlaylist();
+    syncQueueButtons();
     if (wasPlaying) {
       // try next ready
       playFromIndex(i, true);
@@ -213,6 +242,7 @@
     plPlay.textContent = "▶";
     savePlaylist();
     renderPlaylist();
+    syncQueueButtons();
   }
 
   function toast(msg) {
@@ -327,6 +357,7 @@
 
   function renderPlaylist() {
     updatePlaylistBadge();
+    syncQueueButtons();
     const ul = $("#playlist-items");
     const empty = $("#pl-empty");
     ul.innerHTML = "";
@@ -483,18 +514,23 @@
         const bodyMark = t.hasBody
           ? `<span class="dot-ok">有正文</span>`
           : `<span class="dot-no">待缓存</span>`;
+        const et = t.entityType || t.entity_type || "";
+        const eid = String(t.entityId ?? t.entity_id ?? "");
+        const joined = et && eid && isInPlaylist(et, eid);
         li.innerHTML = `
           <div class="topic-row">
             <div class="main">
               <div class="t">${escapeHtml(t.title)}</div>
               <div class="s">${escapeHtml(t.authorName)} · ${bodyMark}</div>
             </div>
-            <button type="button" class="btn-mini add-q">加入待听</button>
+            <button type="button" class="btn-mini add-q${joined ? " joined" : ""}"
+              data-et="${escapeHtml(et)}" data-eid="${escapeHtml(eid)}"
+              ${joined ? "disabled" : ""}>${joined ? "已加入" : "加入待听"}</button>
           </div>`;
         li.querySelector(".main").addEventListener("click", () => openTopic(t));
         li.querySelector(".add-q").addEventListener("click", (e) => {
           e.stopPropagation();
-          addToPlaylist(t);
+          if (addToPlaylist(t)) syncQueueButtons();
         });
         topicsEl.appendChild(li);
       });
@@ -805,6 +841,7 @@
       title: t.title || "",
       authorName: t.authorName || "",
     };
+    syncQueueButtons();
     resetPlayer();
     $("#r-title").textContent = current.title || "（无标题）";
     const pt = $("#player-title");
