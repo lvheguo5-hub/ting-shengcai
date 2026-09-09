@@ -919,6 +919,17 @@
     show(lastViewBeforePlaylist || "home");
   });
   $("#pl-clear").addEventListener("click", clearPlaylist);
+  $("#pl-play-all").addEventListener("click", () => {
+    if (!playlist.length) {
+      toast("暂无待听");
+      return;
+    }
+    // kick prepare for not-ready items, then start from first (auto-skip until playable)
+    playlist.forEach((it) => {
+      if (it.status !== "ready") prepareItem(it).catch(() => {});
+    });
+    playFromIndex(0, true);
+  });
   $("#pl-prepare-all").addEventListener("click", () => {
     playlist.forEach((it) => {
       if (it.status !== "ready") prepareItem(it).catch(() => {});

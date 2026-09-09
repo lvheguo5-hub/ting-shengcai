@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f1419" />
+  <meta name="theme-color" content="#F2F2F7" />
   <title>听生财</title>
-  <link rel="stylesheet" href="/styles.css?v=14" />
+  <link rel="stylesheet" href="/styles.css?v=16" />
 </head>
 <body>
   <div id="app">
@@ -70,6 +70,7 @@
       <div class="pl-header">
         <h1>待听 / 播放列表</h1>
         <div class="pl-toolbar">
+          <button type="button" id="pl-play-all" class="btn-primary">全部播放</button>
           <button type="button" id="pl-prepare-all" class="btn-secondary">全部准备</button>
           <button type="button" id="pl-clear" class="btn-danger">清空</button>
         </div>
@@ -111,6 +112,6 @@
     </div>
     <audio id="pl-audio" preload="none"></audio>
   </div>
-  <script src="/app.js?v=14"></script>
+  <script src="/app.js?v=16"></script>
 </body>
 </html>
