@@ -61,6 +61,7 @@
   let pollTimer = null;
   let authorCtx = { id: null, name: "", page: 1, hasMore: false, loading: false };
   let browseCtx = { kind: null, page: 1, hasMore: false, loading: false, topics: [] };
+  let fromPlaylist = false;
 
   const audio = $("#audio");
   const btnPlay = $("#btn-play");
@@ -334,23 +335,31 @@
       const li = document.createElement("li");
       if (idx === plIndex) li.classList.add("playing");
       li.innerHTML = `
-        <div class="pl-item-top">
-          <div class="t">${escapeHtml(item.title || "（无标题）")}</div>
-          <span class="status-badge ${meta.cls}">${meta.label}</span>
+        <div class="pl-item-main" role="button" tabindex="0">
+          <div class="pl-item-top">
+            <div class="t">${escapeHtml(item.title || "（无标题）")}</div>
+            <span class="status-badge ${meta.cls}">${meta.label}</span>
+          </div>
+          <div class="pl-item-meta">${escapeHtml(item.authorName || "")}${
+            item.error ? " · " + escapeHtml(item.error) : ""
+          } · 点标题播放并看正文</div>
         </div>
-        <div class="pl-item-meta">${escapeHtml(item.authorName || "")}${
-          item.error ? " · " + escapeHtml(item.error) : ""
-        }</div>
         <div class="pl-item-actions">
-          <button type="button" class="btn-mini" data-act="play">从本项播放</button>
-          <button type="button" class="btn-mini" data-act="prep">准备</button>
           <button type="button" class="btn-mini danger" data-act="rm">移除</button>
         </div>`;
-      li.querySelector('[data-act="play"]').addEventListener("click", () => playFromIndex(idx, false));
-      li.querySelector('[data-act="prep"]').addEventListener("click", () => prepareItem(item));
-      li.querySelector('[data-act="rm"]').addEventListener("click", () =>
-        removeFromPlaylist(item.entityType, item.entityId)
-      );
+      const main = li.querySelector(".pl-item-main");
+      const go = () => playAndOpenFromPlaylist(idx);
+      main.addEventListener("click", go);
+      main.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          go();
+        }
+      });
+      li.querySelector('[data-act="rm"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeFromPlaylist(item.entityType, item.entityId);
+      });
       ul.appendChild(li);
     });
   }
@@ -690,7 +699,66 @@
     }
   }
 
-  async function openTopic(t) {
+
+  function setReaderPlaylistNav(on) {
+    const prev = $("#btn-prev");
+    const next = $("#btn-next");
+    if (prev) prev.disabled = !on;
+    if (next) next.disabled = !on;
+  }
+
+  async function playAndOpenFromPlaylist(idx) {
+    if (idx < 0 || idx >= playlist.length) return;
+    const item = playlist[idx];
+    fromPlaylist = true;
+    plIndex = idx;
+    lastViewBeforePlaylist = "playlist";
+    // pause playlist dock so reader audio is the one playing
+    try {
+      plAudio.pause();
+    } catch (_) {}
+    setReaderPlaylistNav(true);
+    await openTopic(item, { autoPlay: true, fromPlaylist: true });
+    // If audio already cached on playlist item, play immediately (openTopic may also load)
+    if (item.audioUrl) {
+      loadAudio(item.audioUrl);
+      btnTts.textContent = "播放语音（已缓存）";
+      try {
+        await audio.play();
+        btnPlay.textContent = "⏸";
+      } catch (_) {
+        btnPlay.textContent = "▶";
+      }
+    } else {
+      // join already triggered prepare — wait a bit then play
+      toast("语音准备中…");
+      for (let n = 0; n < 20; n++) {
+        await pollItem(item).catch(() => {});
+        if (item.audioUrl) {
+          loadAudio(item.audioUrl);
+          btnTts.textContent = "播放语音（已缓存）";
+          try {
+            await audio.play();
+            btnPlay.textContent = "⏸";
+          } catch (_) {}
+          break;
+        }
+        if (item.status === "fail") {
+          toast(item.error || "准备失败");
+          break;
+        }
+        await sleep(1500);
+      }
+    }
+    renderPlaylist();
+  }
+
+  async function openTopic(t, opts) {
+    opts = opts || {};
+    if (!opts.fromPlaylist) {
+      fromPlaylist = false;
+      setReaderPlaylistNav(false);
+    }
     current = {
       entityType: t.entityType,
       entityId: String(t.entityId),
@@ -720,6 +788,13 @@
       const { ok, status, data } = await api(base + q);
       if (ok && status === 200 && data && data.text != null && !data.needFetch) {
         await applyTopicPayload(data);
+        if (opts.autoPlay && data.hasAudio && data.audioUrl) {
+          loadAudio(data.audioUrl);
+          try {
+            await audio.play();
+            btnPlay.textContent = "⏸";
+          } catch (_) {}
+        }
         return;
       }
       const err = (data && data.error) || `HTTP ${status}`;
@@ -786,6 +861,10 @@
   });
   $("#back-home").addEventListener("click", () => show("home"));
   $("#back-results").addEventListener("click", () => {
+    if (fromPlaylist) {
+      show("playlist");
+      return;
+    }
     if (lastResults.topics?.length || lastResults.authors?.length) show("results");
     else show("home");
   });
@@ -820,6 +899,18 @@
     }
   });
   btnRate.addEventListener("click", () => cycleRate());
+  $("#btn-prev").addEventListener("click", () => {
+    if (!fromPlaylist) return;
+    const i = prevReadyIndex(plIndex < 0 ? playlist.length : plIndex);
+    if (i >= 0) playAndOpenFromPlaylist(i);
+    else toast("前面没有可播放项");
+  });
+  $("#btn-next").addEventListener("click", () => {
+    if (!fromPlaylist) return;
+    const i = nextReadyIndex(plIndex < 0 ? -1 : plIndex, false);
+    if (i >= 0) playAndOpenFromPlaylist(i);
+    else toast("后面没有可播放项");
+  });
   audio.addEventListener("timeupdate", () => {
     seek.value = audio.currentTime || 0;
     $("#cur").textContent = fmt(audio.currentTime);
@@ -838,6 +929,10 @@
   });
   audio.addEventListener("ended", () => {
     btnPlay.textContent = "▶";
+    if (fromPlaylist) {
+      const i = nextReadyIndex(plIndex, false);
+      if (i >= 0) playAndOpenFromPlaylist(i);
+    }
   });
   seek.addEventListener("input", () => {
     audio.currentTime = parseFloat(seek.value) || 0;

@@ -235,3 +235,8 @@ h2 { font-size: 1rem; color: var(--muted); font-weight: 600; margin: 18px 0 10px
 .pager .btn-secondary:disabled { opacity: .45; cursor: not-allowed; }
 .chip.loading { opacity: .55; pointer-events: none; }
 #results-status { margin: 0 0 12px; }
+
+.pl-item-main { cursor: pointer; flex: 1; min-width: 0; }
+.playlist-list li { display: flex; gap: 10px; align-items: flex-start; }
+.pl-item-main:active { opacity: .85; }
+.pl-item-actions { margin-top: 0; flex-shrink: 0; }
