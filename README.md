@@ -4,6 +4,17 @@
 
 > **非生财官方产品。** 自托管小工具，方便边听边刷长文。
 
+## 用 AI 一键装（推荐给 Codex）
+
+大多数人不必手敲命令：把仓库丢给 **Codex / Cursor / Claude Code**，让 AI 读 `AGENTS.md` 自动装环境。
+
+1. 打开 [PROMPT_FOR_CODEX.md](./PROMPT_FOR_CODEX.md)，整段复制发给你的 AI  
+2. AI 装依赖并运行 `mcp_login.py`  
+3. **你只需扫码/登录授权生财账号**  
+4. AI 启动后打开 http://127.0.0.1:8766/
+
+详细机器步骤见 [AGENTS.md](./AGENTS.md)。
+
 ## 功能
 
 - 搜作者、搜标题（MCP `userSearch` / `searchTopic`）

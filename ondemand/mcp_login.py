@@ -2,8 +2,8 @@
 """OAuth PKCE login for Shengcai MCP (public client).
 
 Usage:
-  cd /workspace/someone-listening/ondemand
-  /workspace/.venv-ondemand/bin/python mcp_login.py
+  cd ondemand
+  .venv/bin/python mcp_login.py
 
 Prints the authorize URL, listens on http://127.0.0.1:8767/callback,
 exchanges the code for tokens, stores them in secrets/mcp_tokens.json.
@@ -37,7 +37,7 @@ from mcp_client import (
     save_tokens,
 )
 
-CLIENT_NAME = "someone-listening-ondemand"
+CLIENT_NAME = "ting-shengcai"
 LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 8767
 

@@ -54,7 +54,7 @@ if not authors_path.exists():
 if not topics_path.exists():
     topics_path.write_text('{"topics":[]}\n', encoding="utf-8")
 
-app = FastAPI(title="有人听 On-Demand", version="0.4.0")
+app = FastAPI(title="听生财", version="0.5.0")
 
 _prefetch_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="mcp-prefetch")
 _prefetch_lock = threading.Lock()
@@ -133,7 +133,7 @@ def _kick_prefetch(author_id: str, limit: int = 5) -> None:
 def health() -> dict:
     return {
         "ok": True,
-        "service": "someone-listening-ondemand",
+        "service": "ting-shengcai",
         "port": 8766,
         "edge_tts": EDGE_TTS.exists(),
         "authors": len(_authors()),
