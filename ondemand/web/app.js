@@ -62,6 +62,7 @@
   let authorCtx = { id: null, name: "", page: 1, hasMore: false, loading: false };
   let browseCtx = { kind: null, page: 1, hasMore: false, loading: false, topics: [] };
   let fromPlaylist = false;
+  let playSession = 0; // bump to cancel stale open/play
 
   const audio = $("#audio");
   const btnPlay = $("#btn-play");
@@ -342,7 +343,7 @@
           </div>
           <div class="pl-item-meta">${escapeHtml(item.authorName || "")}${
             item.error ? " · " + escapeHtml(item.error) : ""
-          } · 点标题播放并看正文</div>
+          }</div>
         </div>
         <div class="pl-item-actions">
           <button type="button" class="btn-mini danger" data-act="rm">移除</button>
@@ -387,6 +388,9 @@
       $("#pl-now").textContent = "未在播放";
       return;
     }
+    const session = ++playSession;
+    fromPlaylist = false;
+    stopReaderAudio();
     let i = idx;
     let item = playlist[i];
     if (item.status !== "ready" || !item.audioUrl) {
@@ -408,19 +412,23 @@
         return;
       }
     }
+    if (session !== playSession) return;
     plIndex = i;
     item = playlist[i];
     $("#pl-now").textContent = `正在播放：${item.title || "（无标题）"}`;
     plAudio.src = item.audioUrl;
     applyRateTo(plAudio);
     plAudio.load();
-    // browsers often reset playbackRate on new src — re-apply after metadata
     const want = getSavedRate();
     plAudio.playbackRate = want;
     plPlay.disabled = false;
     plSeek.disabled = false;
     try {
       await plAudio.play();
+      if (session !== playSession) {
+        plAudio.pause();
+        return;
+      }
       plPlay.textContent = "⏸";
     } catch {
       plPlay.textContent = "▶";
@@ -662,6 +670,24 @@
     }
   }
 
+  function stopPlaylistAudio() {
+    try {
+      plAudio.pause();
+      plAudio.removeAttribute("src");
+      plAudio.load();
+    } catch (_) {}
+    plPlay.textContent = "▶";
+  }
+
+  function stopReaderAudio() {
+    try {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    } catch (_) {}
+    btnPlay.textContent = "▶";
+  }
+
   function resetPlayer() {
     audio.pause();
     audio.removeAttribute("src");
@@ -707,58 +733,68 @@
     if (next) next.disabled = !on;
   }
 
+  async function playReaderUrl(url, session) {
+    if (!url || session !== playSession) return false;
+    stopPlaylistAudio();
+    loadAudio(url);
+    btnTts.textContent = "播放语音（已缓存）";
+    try {
+      await audio.play();
+      if (session !== playSession) {
+        audio.pause();
+        return false;
+      }
+      btnPlay.textContent = "⏸";
+      return true;
+    } catch (_) {
+      btnPlay.textContent = "▶";
+      return false;
+    }
+  }
+
+  async function waitAndPlayItem(item, session) {
+    if (item.audioUrl) return playReaderUrl(item.audioUrl, session);
+    toast("语音准备中…");
+    prepareItem(item).catch(() => {});
+    for (let n = 0; n < 30; n++) {
+      if (session !== playSession) return false;
+      await pollItem(item).catch(() => {});
+      if (item.audioUrl) return playReaderUrl(item.audioUrl, session);
+      if (item.status === "fail") {
+        toast(item.error || "准备失败");
+        return false;
+      }
+      await sleep(1200);
+    }
+    toast("语音仍在准备，稍后再点标题");
+    return false;
+  }
+
   async function playAndOpenFromPlaylist(idx) {
     if (idx < 0 || idx >= playlist.length) return;
+    const session = ++playSession;
     const item = playlist[idx];
     fromPlaylist = true;
     plIndex = idx;
     lastViewBeforePlaylist = "playlist";
-    // pause playlist dock so reader audio is the one playing
-    try {
-      plAudio.pause();
-    } catch (_) {}
+    stopPlaylistAudio();
     setReaderPlaylistNav(true);
-    await openTopic(item, { autoPlay: true, fromPlaylist: true });
-    // If audio already cached on playlist item, play immediately (openTopic may also load)
-    if (item.audioUrl) {
-      loadAudio(item.audioUrl);
-      btnTts.textContent = "播放语音（已缓存）";
-      try {
-        await audio.play();
-        btnPlay.textContent = "⏸";
-      } catch (_) {
-        btnPlay.textContent = "▶";
-      }
-    } else {
-      // join already triggered prepare — wait a bit then play
-      toast("语音准备中…");
-      for (let n = 0; n < 20; n++) {
-        await pollItem(item).catch(() => {});
-        if (item.audioUrl) {
-          loadAudio(item.audioUrl);
-          btnTts.textContent = "播放语音（已缓存）";
-          try {
-            await audio.play();
-            btnPlay.textContent = "⏸";
-          } catch (_) {}
-          break;
-        }
-        if (item.status === "fail") {
-          toast(item.error || "准备失败");
-          break;
-        }
-        await sleep(1500);
-      }
-    }
-    renderPlaylist();
+    // open text only — single play path below (avoid double audio.play)
+    await openTopic(item, { autoPlay: false, fromPlaylist: true, session });
+    if (session !== playSession) return;
+    await waitAndPlayItem(item, session);
+    if (session === playSession) renderPlaylist();
   }
 
   async function openTopic(t, opts) {
     opts = opts || {};
+    const session = opts.session || ++playSession;
     if (!opts.fromPlaylist) {
       fromPlaylist = false;
       setReaderPlaylistNav(false);
     }
+    // never let 待听 dock keep sounding under the reader
+    stopPlaylistAudio();
     current = {
       entityType: t.entityType,
       entityId: String(t.entityId),
@@ -786,14 +822,11 @@
     for (let i = 0; i < 3; i++) {
       $("#r-empty").textContent = i === 0 ? "正在从生财拉取正文…" : `重试拉取（${i + 1}/3）…`;
       const { ok, status, data } = await api(base + q);
+      if (session !== playSession) return;
       if (ok && status === 200 && data && data.text != null && !data.needFetch) {
         await applyTopicPayload(data);
         if (opts.autoPlay && data.hasAudio && data.audioUrl) {
-          loadAudio(data.audioUrl);
-          try {
-            await audio.play();
-            btnPlay.textContent = "⏸";
-          } catch (_) {}
+          await playReaderUrl(data.audioUrl, session);
         }
         return;
       }
@@ -819,6 +852,8 @@
 
   async function ensureTtsAndPlay() {
     if (!current) return;
+    stopPlaylistAudio();
+    const session = ++playSession;
     btnTts.disabled = true;
     const prev = btnTts.textContent;
     btnTts.textContent = "生成中…";
@@ -833,10 +868,9 @@
         btnTts.disabled = false;
         return;
       }
-      loadAudio(data.url);
+      if (session !== playSession) return;
+      await playReaderUrl(data.url, session);
       btnTts.textContent = data.cached ? "播放语音（已缓存）" : "播放语音";
-      await audio.play().catch(() => {});
-      btnPlay.textContent = "⏸";
     } catch (e) {
       alert("语音请求异常");
       btnTts.textContent = prev;
@@ -891,6 +925,7 @@
   btnTts.addEventListener("click", ensureTtsAndPlay);
   btnPlay.addEventListener("click", () => {
     if (audio.paused) {
+      stopPlaylistAudio();
       audio.play();
       btnPlay.textContent = "⏸";
     } else {
@@ -901,15 +936,13 @@
   btnRate.addEventListener("click", () => cycleRate());
   $("#btn-prev").addEventListener("click", () => {
     if (!fromPlaylist) return;
-    const i = prevReadyIndex(plIndex < 0 ? playlist.length : plIndex);
-    if (i >= 0) playAndOpenFromPlaylist(i);
-    else toast("前面没有可播放项");
+    if (plIndex > 0) playAndOpenFromPlaylist(plIndex - 1);
+    else toast("已经是第一首");
   });
   $("#btn-next").addEventListener("click", () => {
     if (!fromPlaylist) return;
-    const i = nextReadyIndex(plIndex < 0 ? -1 : plIndex, false);
-    if (i >= 0) playAndOpenFromPlaylist(i);
-    else toast("后面没有可播放项");
+    if (plIndex + 1 < playlist.length) playAndOpenFromPlaylist(plIndex + 1);
+    else toast("已经是最后一首");
   });
   audio.addEventListener("timeupdate", () => {
     seek.value = audio.currentTime || 0;
@@ -929,10 +962,11 @@
   });
   audio.addEventListener("ended", () => {
     btnPlay.textContent = "▶";
-    if (fromPlaylist) {
-      const i = nextReadyIndex(plIndex, false);
-      if (i >= 0) playAndOpenFromPlaylist(i);
-    }
+    if (!fromPlaylist) return;
+    // sequential next in 待听 (prepare on the fly) so 连播 works
+    const next = plIndex + 1;
+    if (next < playlist.length) playAndOpenFromPlaylist(next);
+    else toast("待听已播完");
   });
   seek.addEventListener("input", () => {
     audio.currentTime = parseFloat(seek.value) || 0;
@@ -947,6 +981,8 @@
       return;
     }
     if (plAudio.paused) {
+      stopReaderAudio();
+      ++playSession;
       plAudio.play();
       plPlay.textContent = "⏸";
     } else {
