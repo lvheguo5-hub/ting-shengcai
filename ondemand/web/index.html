@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1419" />
   <title>听生财</title>
-  <link rel="stylesheet" href="/styles.css?v=13" />
+  <link rel="stylesheet" href="/styles.css?v=14" />
 </head>
 <body>
   <div id="app">
@@ -63,22 +63,6 @@
         <div id="r-body" class="body"></div>
         <p id="r-empty" class="empty hidden">正文尚未缓存</p>
       </article>
-      <div class="player-bar sticky" id="player-bar">
-        <button type="button" id="btn-tts" class="tts">生成/播放语音</button>
-        <div class="player-title" id="player-title">未选择曲目</div>
-        <div class="seek-row">
-          <span class="time" id="cur">0:00</span>
-          <input type="range" id="seek" min="0" max="0" value="0" step="0.1" disabled aria-label="进度" />
-          <span class="time" id="dur">0:00</span>
-        </div>
-        <div class="controls">
-          <button type="button" id="btn-prev" class="ctrl" aria-label="上一首" disabled>⏮</button>
-          <button type="button" id="btn-play" class="ctrl play" aria-label="播放" disabled>▶</button>
-          <button type="button" id="btn-next" class="ctrl" aria-label="下一首" disabled>⏭</button>
-          <button type="button" id="btn-rate" class="ctrl rate" aria-label="倍速">1x</button>
-        </div>
-        <audio id="audio" preload="none"></audio>
-      </div>
     </main>
 
     <main id="view-playlist" class="view hidden">
@@ -92,23 +76,41 @@
       </div>
       <ul id="playlist-items" class="playlist-list"></ul>
       <p id="pl-empty" class="hint">暂无待听。加入后会自动准备语音；点标题即可播放并看正文。</p>
-      <div class="player-bar sticky" id="pl-player-bar">
-        <div class="player-title" id="pl-now">未在播放</div>
-        <div class="seek-row">
-          <span class="time" id="pl-cur">0:00</span>
-          <input type="range" id="pl-seek" min="0" max="0" value="0" step="0.1" disabled aria-label="进度" />
-          <span class="time" id="pl-dur">0:00</span>
-        </div>
-        <div class="controls">
-          <button type="button" id="pl-prev" class="ctrl" aria-label="上一首">⏮</button>
-          <button type="button" id="pl-play" class="ctrl play" aria-label="播放" disabled>▶</button>
-          <button type="button" id="pl-next" class="ctrl" aria-label="下一首">⏭</button>
-          <button type="button" id="pl-btn-rate" class="ctrl rate" aria-label="倍速">1x</button>
-        </div>
-        <audio id="pl-audio" preload="none"></audio>
-      </div>
     </main>
   </div>
-  <script src="/app.js?v=13"></script>
+
+  <!-- docks outside scrolling views so position:fixed sticks to viewport -->
+  <div class="player-bar dock hidden" id="player-bar">
+    <button type="button" id="btn-tts" class="tts">生成/播放语音</button>
+    <div class="player-title" id="player-title">未选择曲目</div>
+    <div class="seek-row">
+      <span class="time" id="cur">0:00</span>
+      <input type="range" id="seek" min="0" max="0" value="0" step="0.1" disabled aria-label="进度" />
+      <span class="time" id="dur">0:00</span>
+    </div>
+    <div class="controls">
+      <button type="button" id="btn-prev" class="ctrl" aria-label="上一首" disabled>⏮</button>
+      <button type="button" id="btn-play" class="ctrl play" aria-label="播放" disabled>▶</button>
+      <button type="button" id="btn-next" class="ctrl" aria-label="下一首" disabled>⏭</button>
+      <button type="button" id="btn-rate" class="ctrl rate" aria-label="倍速">1x</button>
+    </div>
+    <audio id="audio" preload="none"></audio>
+  </div>
+  <div class="player-bar dock hidden" id="pl-player-bar">
+    <div class="player-title" id="pl-now">未在播放</div>
+    <div class="seek-row">
+      <span class="time" id="pl-cur">0:00</span>
+      <input type="range" id="pl-seek" min="0" max="0" value="0" step="0.1" disabled aria-label="进度" />
+      <span class="time" id="pl-dur">0:00</span>
+    </div>
+    <div class="controls">
+      <button type="button" id="pl-prev" class="ctrl" aria-label="上一首">⏮</button>
+      <button type="button" id="pl-play" class="ctrl play" aria-label="播放" disabled>▶</button>
+      <button type="button" id="pl-next" class="ctrl" aria-label="下一首">⏭</button>
+      <button type="button" id="pl-btn-rate" class="ctrl rate" aria-label="倍速">1x</button>
+    </div>
+    <audio id="pl-audio" preload="none"></audio>
+  </div>
+  <script src="/app.js?v=14"></script>
 </body>
 </html>

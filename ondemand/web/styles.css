@@ -101,19 +101,25 @@ h2 { font-size: 1rem; color: var(--muted); font-weight: 600; margin: 18px 0 10px
   border: 1px solid var(--border);
 }
 .empty { color: var(--danger); background: #2a1a1a; padding: 14px; border-radius: 12px; }
-/* Sticky player chrome (v1-like) */
-.player-bar.sticky,
+/* Fixed bottom dock — lives under <body>, not inside scrolling <main> */
+.player-bar.dock,
 .player-bar {
-  position: fixed; left: 0; right: 0; bottom: 0;
-  z-index: 30;
-  background: rgba(26, 35, 50, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  z-index: 100;
+  background: rgba(26, 35, 50, 0.98);
   border-top: 1px solid var(--border);
   padding: 10px 16px calc(10px + var(--safe-bottom));
-  max-width: 720px; margin: 0 auto;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+  /* avoid backdrop-filter here: some WebKits then treat ancestors oddly */
 }
+.player-bar.hidden { display: none !important; }
 .player-bar .tts {
   width: 100%; margin-bottom: 8px;
   background: var(--accent2); color: #1a1208;
@@ -214,9 +220,12 @@ h2 { font-size: 1rem; color: var(--muted); font-weight: 600; margin: 18px 0 10px
 #view-playlist, #view-reader { padding-bottom: calc(220px + var(--safe-bottom)); }
 
 @media (min-width: 721px) {
-  .player-bar.sticky, .player-bar {
-    left: 50%; right: auto; transform: translateX(-50%);
-    width: 720px; border-radius: 16px 16px 0 0;
+  .player-bar.dock, .player-bar {
+    left: max(0px, calc(50% - 360px));
+    right: auto;
+    width: 720px;
+    border-radius: 16px 16px 0 0;
+    /* no transform — keeps fixed to viewport predictably */
   }
 }
 

@@ -80,6 +80,10 @@
     Object.entries(views).forEach(([k, el]) => {
       el.classList.toggle("hidden", k !== name);
     });
+    const readerDock = $("#player-bar");
+    const plDock = $("#pl-player-bar");
+    if (readerDock) readerDock.classList.toggle("hidden", name !== "reader");
+    if (plDock) plDock.classList.toggle("hidden", name !== "playlist");
     if (scroll) window.scrollTo(0, 0);
     if (name === "playlist") {
       startPolling();
