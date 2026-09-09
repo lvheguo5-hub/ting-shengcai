@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""有人听 Phase-2 on-demand API: search → titles → transcript + TTS cache.
+"""听生财 on-demand API: search → titles → transcript + TTS cache.
 
 Happy path uses mechanical mcp_client (streamable HTTP) — no agent queue worker.
 """
@@ -10,7 +10,6 @@ import asyncio
 import json
 import logging
 import os
-import shutil
 import re
 import subprocess
 import tempfile
@@ -32,11 +31,7 @@ AUDIO_CACHE = BASE / "cache" / "audio"
 QUEUE = BASE / "queue"
 WEB = BASE / "web"
 
-EDGE_TTS = Path(
-    os.environ.get("EDGE_TTS_BIN")
-    or shutil.which("edge-tts")
-    or "/workspace/.venv-tts/bin/edge-tts"
-)
+EDGE_TTS = Path("/workspace/.venv-tts/bin/edge-tts")
 VOICE = "zh-CN-YunxiNeural"
 RATE = "-5%"
 MAX_CHARS_MVP = 3000
